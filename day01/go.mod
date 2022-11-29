@@ -1,3 +1,7 @@
-module adventofcode2022/day01
+module adventofcode/day01
 
 go 1.19
+
+replace adventofcode/utils => ../utils
+
+require adventofcode/utils v0.0.0

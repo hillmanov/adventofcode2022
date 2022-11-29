@@ -1,7 +1,12 @@
 define GO_MOD_TEMPLATE
-module adventofcode2022/day${day}
+module adventofcode/day${day}
 
 go 1.19
+
+replace adventofcode/utils => ../utils
+
+require adventofcode/utils v0.0.0
+
 endef
 
 define GO_FILE_TEMPLATE
