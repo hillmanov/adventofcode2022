@@ -158,3 +158,13 @@ func IndexOf[T comparable](haystack []T, needle T) int {
 	}
 	return -1
 }
+
+func Intersection[T comparable](a, b []T) []T {
+	var result []T
+	for _, x := range a {
+		if IndexOf(b, x) != -1 {
+			result = append(result, x)
+		}
+	}
+	return UniqueOf(result)
+}
