@@ -109,3 +109,9 @@ func TestIndexOf(t *testing.T) {
 		t.Error("IndexOf([]int{1, 2, 3}, 4) != -1")
 	}
 }
+
+func TestReverse(t *testing.T) {
+	if Reverse([]int{1, 2, 3, 4, 5, 6})[0] != 6 {
+		t.Error("Reverse([]int{1, 2, 3, 4, 5, 6})[0] != 6")
+	}
+}

@@ -168,3 +168,11 @@ func Intersection[T comparable](a, b []T) []T {
 	}
 	return UniqueOf(result)
 }
+
+func Reverse[T any](collection []T) []T {
+	for i := 0; i < len(collection)/2; i++ {
+		j := len(collection) - i - 1
+		collection[i], collection[j] = collection[j], collection[i]
+	}
+	return collection
+}
