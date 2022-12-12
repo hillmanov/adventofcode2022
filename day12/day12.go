@@ -2,7 +2,6 @@ package main
 
 import (
 	"adventofcode/utils"
-	"container/heap"
 	"embed"
 	"fmt"
 	"sort"
@@ -38,115 +37,28 @@ func (s *Square) ValidMoves(grid Grid) []Square {
 	return moves
 }
 
-func (s *Square) MoveCost(to Square) int {
-	return 1 // Movement always costs 1 (For part 1)
-}
+func BFS(grid Grid, start, end Square) (int, bool) {
+	Q := []Square{start}
+	visited := map[Square]bool{}
+	distances := map[Square]int{}
 
-func (s *Square) MoveCostEstimate(to Square) int {
-	return to.Elevation - s.Elevation // This can be just about anything
-}
-
-// A wrapper around the Square that plays nicely with the required Heap interface
-type Node struct {
-	Square Square
-	Cost   int
-	Rank   int
-	Parent *Node
-	Open   bool
-	Closed bool
-	Index  int // Used by the heap
-}
-
-// For quick lookups of nodes
-type NodeMap map[Square]*Node
-
-func (nm NodeMap) Get(square Square) *Node {
-	node, ok := nm[square]
-	if !ok {
-		node = &Node{Square: square}
-		nm[square] = node
-	}
-	return node
-}
-
-// Implement heap interface methods
-type PriorityQueue []*Node
-
-func (pQ PriorityQueue) Len() int {
-	return len(pQ)
-}
-
-func (pQ PriorityQueue) Less(i, j int) bool {
-	return pQ[i].Rank < pQ[j].Rank
-}
-
-func (pQ PriorityQueue) Swap(i, j int) {
-	pQ[i], pQ[j] = pQ[j], pQ[i]
-	pQ[i].Index = i
-	pQ[j].Index = j
-}
-
-func (pQ *PriorityQueue) Push(x any) {
-	n := len(*pQ)
-	no := x.(*Node)
-	no.Index = n
-	*pQ = append(*pQ, no)
-}
-
-func (pQ *PriorityQueue) Pop() any {
-	old := *pQ
-	oldLength := len(old)
-	last := old[oldLength-1]
-	last.Index = -1
-	*pQ = old[0 : oldLength-1]
-	return last
-}
-
-func Path(grid Grid, from Square, to Square) (path []Square, distance int, pathFound bool) {
-	nodeMap := NodeMap{}
-	pQ := &PriorityQueue{}
-	heap.Init(pQ)
-
-	fromNode := nodeMap.Get(from)
-	fromNode.Open = true
-	heap.Push(pQ, fromNode)
-
+	var current Square
 	for {
-		if pQ.Len() == 0 {
-			return path, distance, false
+		if len(Q) == 0 {
+			return -1, false
 		}
 
-		current := heap.Pop(pQ).(*Node)
-		current.Open = false
-		current.Closed = true
-
-		if current == nodeMap.Get(to) {
-			// We found our path!
-			path := []Square{}
-			c := current
-			for c != nil {
-				path = append(path, c.Square)
-				c = c.Parent
+		current, Q = pop(Q)
+		if !visited[current] {
+			visited[current] = true
+			if current == end {
+				return distances[end], true
 			}
-			return path, current.Cost, true
-		}
-
-		for _, neighbor := range current.Square.ValidMoves(grid) {
-			cost := current.Cost + current.Square.MoveCost(neighbor)
-			neighborNode := nodeMap.Get(neighbor)
-			if cost < neighborNode.Cost {
-				if neighborNode.Open {
-					heap.Remove(pQ, neighborNode.Index)
+			for _, move := range current.ValidMoves(grid) {
+				if !visited[move] {
+					Q = append(Q, move)
+					distances[move] = distances[current] + 1
 				}
-				neighborNode.Open = false
-				neighborNode.Closed = false
-			}
-			if !neighborNode.Open && !neighborNode.Closed {
-				neighborNode.Cost = cost
-				neighborNode.Open = true
-				neighborNode.Rank = cost + neighbor.MoveCostEstimate(to)
-				neighborNode.Parent = current
-				heap.Push(pQ, neighborNode)
 			}
 		}
 	}
@@ -154,7 +66,7 @@ func Path(grid Grid, from Square, to Square) (path []Square, distance int, pathF
 
 func Part1() any {
 	start, end, grid := getInput()
-	_, distance, _ := Path(grid, start, end)
+	distance, _ := BFS(grid, start, end)
 
 	return distance
 }
@@ -177,7 +89,7 @@ func Part2() any {
 	for _, start := range potentialStartingPoints {
 		wg.Add(1)
 		go func(start Square) {
-			_, distance, found := Path(grid, start, end)
+			distance, found := BFS(grid, start, end)
 			if found {
 				distances = append(distances, distance)
 			}
@@ -221,4 +133,8 @@ func getInput() (start Square, end Square, grid Grid) {
 	}
 
 	return start, end, grid
+}
+
+func pop(list []Square) (Square, []Square) {
+	return list[0], list[1:]
 }
