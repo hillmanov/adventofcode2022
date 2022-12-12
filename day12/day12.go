@@ -38,12 +38,12 @@ func (s *Square) ValidMoves(grid Grid) []Square {
 	return moves
 }
 
-func (s *Square) MoveCost(grid Grid, to Square) int {
+func (s *Square) MoveCost(to Square) int {
 	return 1 // Movement always costs 1 (For part 1)
 }
 
-func (s *Square) MoveCostEstimate(grid Grid, to Square) int {
-	return grid[to.Row][to.Col].Elevation - s.Elevation // This can be just about anything
+func (s *Square) MoveCostEstimate(to Square) int {
+	return to.Elevation - s.Elevation // This can be just about anything
 }
 
 // A wrapper around the Square that plays nicely with the required Heap interface
@@ -132,7 +132,7 @@ func Path(grid Grid, from Square, to Square) (path []Square, distance int, pathF
 		}
 
 		for _, neighbor := range current.Square.ValidMoves(grid) {
-			cost := current.Cost + current.Square.MoveCost(grid, neighbor)
+			cost := current.Cost + current.Square.MoveCost(neighbor)
 			neighborNode := nodeMap.Get(neighbor)
 			if cost < neighborNode.Cost {
 				if neighborNode.Open {
@@ -144,7 +144,7 @@ func Path(grid Grid, from Square, to Square) (path []Square, distance int, pathF
 			if !neighborNode.Open && !neighborNode.Closed {
 				neighborNode.Cost = cost
 				neighborNode.Open = true
-				neighborNode.Rank = cost + neighbor.MoveCostEstimate(grid, to)
+				neighborNode.Rank = cost + neighbor.MoveCostEstimate(to)
 				neighborNode.Parent = current
 				heap.Push(pQ, neighborNode)
 			}
