@@ -4,7 +4,6 @@ import (
 	"adventofcode/utils"
 	"embed"
 	"fmt"
-	"math"
 	"regexp"
 	"sort"
 	"strings"
@@ -24,17 +23,19 @@ var f embed.FS
 
 func Part1() any {
 	monkeys := getInput()
-	inspectionCount := make([]int, len(monkeys))
+	monkeyInspectionCount := make([]int, len(monkeys))
 
 	for i := 0; i < 20; i++ {
 		for m := range monkeys {
 			monkey := monkeys[m]
 
 			for len(monkey.Items) > 0 {
-				inspectionCount[m]++
-				item := monkey.Items[0]
-				monkey.Items = monkey.Items[1:]
+				var item int
+				monkeyInspectionCount[m]++
+				item, monkey.Items = pop(monkey.Items)
+
 				worryLevel := int(float64(monkey.Operation(item))) / 3
+
 				if worryLevel%monkey.TestDivisor == 0 {
 					monkeys[monkey.TrueMonkey].Items = append(monkeys[monkey.TrueMonkey].Items, worryLevel)
 				} else {
@@ -44,43 +45,43 @@ func Part1() any {
 		}
 	}
 
-	sort.Slice(inspectionCount, func(i, j int) bool {
-		return inspectionCount[i] > inspectionCount[j]
+	sort.Slice(monkeyInspectionCount, func(i, j int) bool {
+		return monkeyInspectionCount[i] > monkeyInspectionCount[j]
 	})
 
-	return inspectionCount[0] * inspectionCount[1]
+	return monkeyInspectionCount[0] * monkeyInspectionCount[1]
 }
 
 func Part2() any {
 	monkeys := getInput()
-	inspectionCount := make([]int, len(monkeys))
+	lcm := lowestCommonMultiple(monkeys) // Thanks for the tip, Dad!
 
-	for i := 0; i < 20; i++ {
+	monkeyInspectionCount := make([]int, len(monkeys))
+	for i := 0; i < 10_000; i++ {
 		for m := range monkeys {
 			monkey := monkeys[m]
 
 			for len(monkey.Items) > 0 {
-				inspectionCount[m]++
-				item := monkey.Items[0]
-				monkey.Items = monkey.Items[1:]
+				var item int
+				monkeyInspectionCount[m]++
+				item, monkey.Items = pop(monkey.Items)
 
-				worryLevel := int(float64(monkey.Operation(item)))
-				worryLevel = int(math.Logb(float64(worryLevel)))
+				worryLevel := int(float64(monkey.Operation(item))) % lcm
 
 				if worryLevel%monkey.TestDivisor == 0 {
-					monkeys[monkey.TrueMonkey].Items = append(monkeys[monkey.TrueMonkey].Items, item)
+					monkeys[monkey.TrueMonkey].Items = append(monkeys[monkey.TrueMonkey].Items, worryLevel)
 				} else {
-					monkeys[monkey.FalseMonkey].Items = append(monkeys[monkey.FalseMonkey].Items, item)
+					monkeys[monkey.FalseMonkey].Items = append(monkeys[monkey.FalseMonkey].Items, worryLevel)
 				}
 			}
 		}
 	}
 
-	sort.Slice(inspectionCount, func(i, j int) bool {
-		return inspectionCount[i] > inspectionCount[j]
+	sort.Slice(monkeyInspectionCount, func(i, j int) bool {
+		return monkeyInspectionCount[i] > monkeyInspectionCount[j]
 	})
 
-	return nil
+	return monkeyInspectionCount[0] * monkeyInspectionCount[1]
 }
 
 func main() {
@@ -103,7 +104,7 @@ func getInput() []*Monkey {
 		monkey := Monkey{}
 
 		fmt.Sscanf(strings.Trim(lines[0], " "), "Monkey %d:", &monkey.ID)
-		monkey.Items = ExtractItems(strings.TrimPrefix(strings.TrimLeft(lines[1], " "), "Starting items: "))
+		monkey.Items = extractItems(strings.TrimPrefix(strings.TrimLeft(lines[1], " "), "Starting items: "))
 
 		var argA, operator, argB string
 		fmt.Sscanf(strings.Trim(lines[2], " "), "Operation: new = %s %s %s", &argA, &operator, &argB)
@@ -142,10 +143,29 @@ func getInput() []*Monkey {
 	return monkeys
 }
 
-func ExtractItems(strItems string) []int {
+func extractItems(strItems string) []int {
 	items := []int{}
 	for _, strItem := range strings.Split(strItems, ", ") {
 		items = append(items, utils.ParseInt(strItem))
 	}
 	return items
+}
+
+func lowestCommonMultiple(list []*Monkey) int {
+	lcm := 1
+	for _, monkey := range list {
+		lcm = lcm * monkey.TestDivisor / greatestCommonDivisor(lcm, monkey.TestDivisor)
+	}
+	return lcm
+}
+
+func greatestCommonDivisor(a, b int) int {
+	if b == 0 {
+		return a
+	}
+	return greatestCommonDivisor(b, a%b)
+}
+
+func pop(list []int) (int, []int) {
+	return list[0], list[1:]
 }
