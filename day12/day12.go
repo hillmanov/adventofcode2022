@@ -6,6 +6,7 @@ import (
 	"embed"
 	"fmt"
 	"sort"
+	"sync"
 )
 
 //go:embed input.txt
@@ -37,14 +38,15 @@ func (s *Square) ValidMoves(grid Grid) []Square {
 	return moves
 }
 
-func (s *Square) MovementCost(grid Grid, to Square) int {
+func (s *Square) MoveCost(grid Grid, to Square) int {
 	return 1 // Movement always costs 1 (For part 1)
 }
 
-func (s *Square) EstimatedCost(grid Grid, to Square) int {
+func (s *Square) MoveCostEstimate(grid Grid, to Square) int {
 	return grid[to.Row][to.Col].Elevation - s.Elevation // This can be just about anything
 }
 
+// A wrapper around the Square that plays nicely with the required Heap interface
 type Node struct {
 	Square Square
 	Cost   int
@@ -55,6 +57,7 @@ type Node struct {
 	Index  int // Used by the heap
 }
 
+// For quick lookups of nodes
 type NodeMap map[Square]*Node
 
 func (nm NodeMap) Get(square Square) *Node {
@@ -66,6 +69,7 @@ func (nm NodeMap) Get(square Square) *Node {
 	return node
 }
 
+// Implement heap interface methods
 type PriorityQueue []*Node
 
 func (pQ PriorityQueue) Len() int {
@@ -128,7 +132,7 @@ func Path(grid Grid, from Square, to Square) (path []Square, distance int, pathF
 		}
 
 		for _, neighbor := range current.Square.ValidMoves(grid) {
-			cost := current.Cost + current.Square.MovementCost(grid, neighbor)
+			cost := current.Cost + current.Square.MoveCost(grid, neighbor)
 			neighborNode := nodeMap.Get(neighbor)
 			if cost < neighborNode.Cost {
 				if neighborNode.Open {
@@ -140,7 +144,7 @@ func Path(grid Grid, from Square, to Square) (path []Square, distance int, pathF
 			if !neighborNode.Open && !neighborNode.Closed {
 				neighborNode.Cost = cost
 				neighborNode.Open = true
-				neighborNode.Rank = cost + neighbor.EstimatedCost(grid, to)
+				neighborNode.Rank = cost + neighbor.MoveCostEstimate(grid, to)
 				neighborNode.Parent = current
 				heap.Push(pQ, neighborNode)
 			}
@@ -168,12 +172,19 @@ func Part2() any {
 	}
 
 	distances := []int{}
+	// Easy concurrency!
+	wg := sync.WaitGroup{}
 	for _, start := range potentialStartingPoints {
-		_, distance, found := Path(grid, start, end)
-		if found {
-			distances = append(distances, distance)
-		}
+		wg.Add(1)
+		go func(start Square) {
+			_, distance, found := Path(grid, start, end)
+			if found {
+				distances = append(distances, distance)
+			}
+			wg.Done()
+		}(start)
 	}
+	wg.Wait()
 
 	sort.Slice(distances, func(i, j int) bool {
 		return distances[i] < distances[j]
