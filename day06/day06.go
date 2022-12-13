@@ -4,7 +4,7 @@ import (
 	"adventofcode/utils"
 	"embed"
 	"fmt"
-	"strings"
+	"math/bits"
 )
 
 //go:embed input.txt
@@ -28,10 +28,16 @@ func main() {
 	fmt.Printf("Day 06: Part 2: = %+v\n", part2Solution)
 }
 
-func findNUnique(str string, n int) int {
-	for i := 0; i < len(str)-n; i++ {
-		if len(utils.UniqueOf(strings.Split(str[i:i+n], ""))) == n {
-			return i + n
+func findNUnique(str string, windowSize int) int {
+	set := uint(0)
+
+	for i := 0; i < len(str)-windowSize; i++ {
+		set = set ^ (1 << (str[i] - 'a'))
+		if i >= windowSize {
+			set = set ^ (1 << (str[i-windowSize] - 'a'))
+		}
+		if bits.OnesCount(set) == windowSize {
+			return i + 1
 		}
 	}
 	return -1
