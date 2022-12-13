@@ -17,9 +17,14 @@ type Square struct {
 	Col       int
 }
 
+var cache sync.Map
+
 type Grid [][]Square
 
-func (s *Square) ValidMoves(grid Grid) []Square {
+func (s Square) ValidMoves(grid Grid) []Square {
+	if moves, ok := cache.Load(s); ok {
+		return moves.([]Square)
+	}
 	moves := []Square{}
 	if s.Row > 0 && grid[s.Row-1][s.Col].Elevation-s.Elevation <= 1 {
 		moves = append(moves, grid[s.Row-1][s.Col])
@@ -33,6 +38,8 @@ func (s *Square) ValidMoves(grid Grid) []Square {
 	if s.Col < len(grid[0])-1 && grid[s.Row][s.Col+1].Elevation-s.Elevation <= 1 {
 		moves = append(moves, grid[s.Row][s.Col+1])
 	}
+
+	cache.Store(s, moves)
 
 	return moves
 }
@@ -106,6 +113,7 @@ func Part2() any {
 }
 
 func main() {
+	cache = sync.Map{}
 	part1Solution := Part1()
 	part2Solution := Part2()
 
