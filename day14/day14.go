@@ -29,10 +29,11 @@ type RockPath struct {
 }
 
 type Cave struct {
-	Map  map[Point]Tile
-	MaxY int
-	MinX int
-	MaxX int
+	Map        map[Point]Tile
+	Normalizer int
+	MaxY       int
+	MinX       int
+	MaxX       int
 }
 
 func (c *Cave) GetTile(p Point) Tile {
@@ -109,11 +110,11 @@ func simulateSand(cave Cave, start Point) (resting Point, inCave bool) {
 }
 
 func Part1() any {
-	cave, xNormalizer := getInput()
+	cave := getInput()
 
 	i := 0
 	for {
-		restingPoint, inCave := simulateSand(cave, Point{X: 500 - xNormalizer, Y: 0})
+		restingPoint, inCave := simulateSand(cave, Point{Y: 0, X: 500 - cave.Normalizer})
 		if !inCave {
 			break
 		}
@@ -125,14 +126,14 @@ func Part1() any {
 }
 
 func Part2() any {
-	cave, xNormalizer := getInput()
+	cave := getInput()
 
 	// Setup the floor, and infinite sides
 	cave.MaxX = math.MaxInt
 	cave.MinX = math.MinInt
 	cave.MaxY = cave.MaxY + 1
 
-	sandOrigin := Point{X: 500 - xNormalizer, Y: 0}
+	sandOrigin := Point{Y: 0, X: 500 - cave.Normalizer}
 
 	i := 0
 	for {
@@ -155,7 +156,7 @@ func main() {
 	fmt.Printf("Day 14: Part 2: = %+v\n", part2Solution)
 }
 
-func getInput() (Cave, int) {
+func getInput() Cave {
 	lines, _ := utils.ReadLines(f, "input.txt")
 
 	cave := Cave{
@@ -198,6 +199,7 @@ func getInput() (Cave, int) {
 	cave.MaxY = maxY + 1
 	cave.MinX = 0
 	cave.MaxX = maxX + 1
+	cave.Normalizer = minX
 
 	// Normalize Xs
 	for i := range rockPaths {
@@ -220,7 +222,7 @@ func getInput() (Cave, int) {
 		}
 	}
 
-	return cave, minX
+	return cave
 }
 
 func getDelta(v int) int {
