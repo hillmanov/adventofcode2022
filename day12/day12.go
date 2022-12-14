@@ -4,7 +4,7 @@ import (
 	"adventofcode/utils"
 	"embed"
 	"fmt"
-	"sort"
+	"math"
 	"sync"
 )
 
@@ -81,35 +81,25 @@ func Part1() any {
 func Part2() any {
 	_, end, grid := getInput()
 
-	potentialStartingPoints := []Square{}
+	minDistance := math.MaxInt
+	wg := sync.WaitGroup{}
 	for row := range grid {
 		for col := range grid[row] {
 			if grid[row][col].Elevation == 0 {
-				potentialStartingPoints = append(potentialStartingPoints, grid[row][col])
+				wg.Add(1)
+				go func(start Square) {
+					distance, found := BFS(grid, start, end)
+					if found {
+						minDistance = utils.Min(distance, minDistance)
+					}
+					wg.Done()
+				}(grid[row][col])
 			}
 		}
 	}
-
-	distances := []int{}
-	// Easy concurrency!
-	wg := sync.WaitGroup{}
-	for _, start := range potentialStartingPoints {
-		wg.Add(1)
-		go func(start Square) {
-			distance, found := BFS(grid, start, end)
-			if found {
-				distances = append(distances, distance)
-			}
-			wg.Done()
-		}(start)
-	}
 	wg.Wait()
 
-	sort.Slice(distances, func(i, j int) bool {
-		return distances[i] < distances[j]
-	})
-
-	return distances[0]
+	return minDistance
 }
 
 func main() {
