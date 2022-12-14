@@ -4,7 +4,6 @@ import (
 	"adventofcode/utils"
 	"embed"
 	"fmt"
-	"math"
 	"sync"
 )
 
@@ -17,25 +16,29 @@ type Square struct {
 	Col       int
 }
 
+type moveValidatorFunc func(int, int) bool
+
+type terminatorFunc func(Square) bool
+
 var cache sync.Map
 
 type Grid [][]Square
 
-func (s Square) ValidMoves(grid Grid) []Square {
+func (s Square) ValidMoves(grid Grid, validateMove moveValidatorFunc) []Square {
 	if moves, ok := cache.Load(s); ok {
 		return moves.([]Square)
 	}
 	moves := []Square{}
-	if s.Row > 0 && grid[s.Row-1][s.Col].Elevation-s.Elevation <= 1 {
+	if s.Row > 0 && validateMove(grid[s.Row-1][s.Col].Elevation, s.Elevation) {
 		moves = append(moves, grid[s.Row-1][s.Col])
 	}
-	if s.Row < len(grid)-1 && grid[s.Row+1][s.Col].Elevation-s.Elevation <= 1 {
+	if s.Row < len(grid)-1 && validateMove(grid[s.Row+1][s.Col].Elevation, s.Elevation) {
 		moves = append(moves, grid[s.Row+1][s.Col])
 	}
-	if s.Col > 0 && grid[s.Row][s.Col-1].Elevation-s.Elevation <= 1 {
+	if s.Col > 0 && validateMove(grid[s.Row][s.Col-1].Elevation, s.Elevation) {
 		moves = append(moves, grid[s.Row][s.Col-1])
 	}
-	if s.Col < len(grid[0])-1 && grid[s.Row][s.Col+1].Elevation-s.Elevation <= 1 {
+	if s.Col < len(grid[0])-1 && validateMove(grid[s.Row][s.Col+1].Elevation, s.Elevation) {
 		moves = append(moves, grid[s.Row][s.Col+1])
 	}
 
@@ -44,7 +47,7 @@ func (s Square) ValidMoves(grid Grid) []Square {
 	return moves
 }
 
-func BFS(grid Grid, start, end Square) (int, bool) {
+func BFS(grid Grid, start Square, terminator terminatorFunc, validateMove moveValidatorFunc) (int, bool) {
 	Q := []Square{start}
 	visited := map[Square]bool{}
 	distances := map[Square]int{}
@@ -58,10 +61,10 @@ func BFS(grid Grid, start, end Square) (int, bool) {
 		current, Q = pop(Q)
 		if !visited[current] {
 			visited[current] = true
-			if current == end {
-				return distances[end], true
+			if terminator(current) {
+				return distances[current], true
 			}
-			for _, move := range current.ValidMoves(grid) {
+			for _, move := range current.ValidMoves(grid, validateMove) {
 				if !visited[move] {
 					Q = append(Q, move)
 					distances[move] = distances[current] + 1
@@ -72,38 +75,30 @@ func BFS(grid Grid, start, end Square) (int, bool) {
 }
 
 func Part1() any {
+	cache = sync.Map{}
 	start, end, grid := getInput()
-	distance, _ := BFS(grid, start, end)
+
+	terminator := func(s Square) bool {
+		return s == end
+	}
+
+	distance, _ := BFS(grid, start, terminator, up)
 
 	return distance
 }
 
 func Part2() any {
+	cache = sync.Map{}
 	_, end, grid := getInput()
-
-	minDistance := math.MaxInt
-	wg := sync.WaitGroup{}
-	for row := range grid {
-		for col := range grid[row] {
-			if grid[row][col].Elevation == 0 {
-				wg.Add(1)
-				go func(start Square) {
-					distance, found := BFS(grid, start, end)
-					if found {
-						minDistance = utils.Min(distance, minDistance)
-					}
-					wg.Done()
-				}(grid[row][col])
-			}
-		}
+	terminator := func(s Square) bool {
+		return grid[s.Row][s.Col].Elevation == 0
 	}
-	wg.Wait()
+	distance, _ := BFS(grid, end, terminator, down)
 
-	return minDistance
+	return distance
 }
 
 func main() {
-	cache = sync.Map{}
 	part1Solution := Part1()
 	part2Solution := Part2()
 
@@ -135,4 +130,11 @@ func getInput() (start Square, end Square, grid Grid) {
 
 func pop(list []Square) (Square, []Square) {
 	return list[0], list[1:]
+}
+
+func up(a, b int) bool {
+	return a <= b+1
+}
+func down(a, b int) bool {
+	return b <= a+1
 }
