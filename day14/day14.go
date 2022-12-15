@@ -14,8 +14,8 @@ var f embed.FS
 type Tile int
 
 const (
-	ROCK Tile = iota
-	AIR
+	AIR Tile = iota
+	ROCK
 	SAND
 )
 
@@ -37,11 +37,7 @@ type Cave struct {
 }
 
 func (c *Cave) GetTile(p Point) Tile {
-	tile, ok := c.Map[p]
-	if !ok {
-		return AIR
-	}
-	return tile
+	return c.Map[p]
 }
 
 func (c Cave) Dump() {
