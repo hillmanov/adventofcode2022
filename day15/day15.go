@@ -4,16 +4,14 @@ import (
 	"adventofcode/utils"
 	"embed"
 	"fmt"
-	"math"
 	"sort"
 )
 
 //go:embed input.txt
 var f embed.FS
 
-type Bounds struct {
-	MinCol, MaxCol int
-	MinRow, MaxRow int
+type Range struct {
+	Start, End int
 }
 
 type Sensor struct {
@@ -21,38 +19,38 @@ type Sensor struct {
 	Reach    int
 }
 
-func (s Sensor) BoundsAtRow(row int) (minCol int, maxCol int, inBounds bool) {
+func (s Sensor) RangeAtRow(row int) (r Range, inBounds bool) {
 	colDelta := s.Col - (s.Col + utils.Abs(s.Row-row) - s.Reach)
 	if colDelta < 0 {
-		return s.Col, s.Col, false
+		return Range{s.Col, s.Col}, false
 	}
-	return s.Col - colDelta, s.Col + colDelta, true
+	return Range{s.Col - colDelta, s.Col + colDelta}, true
 }
 
 func Part1() any {
-	sensors, _ := getInput()
+	sensors := getInput()
 
 	ranges := getMergedRanges(sensors, 2_000_000)
 	takenSpots := 0
 	for _, r := range ranges {
-		takenSpots += r[1] - r[0]
+		takenSpots += r.End - r.Start
 	}
 
 	return takenSpots
 }
 
 func Part2() any {
-	sensors, _ := getInput()
+	sensors := getInput()
 
 	result := -1
-
 	searchRow := func(row int) {
 		ranges := getMergedRanges(sensors, row)
 		if len(ranges) == 2 { // We found the row with the gap, we can find the column by looking at the ranges
-			result = ((ranges[0][1] + 1) * 4_000_000) + row
+			result = ((ranges[0].End + 1) * 4_000_000) + row
 		}
 	}
 
+	// Search from both sides
 	for row := 0; row < 4_000_000/2; row++ {
 		if result == -1 {
 			go searchRow(row)
@@ -71,24 +69,24 @@ func main() {
 	fmt.Printf("Day 15: Part 2: = %+v\n", part2Solution)
 }
 
-func getMergedRanges(sensors []Sensor, row int) [][2]int {
+func getMergedRanges(sensors []Sensor, row int) []Range {
 	// Gather all the minCol/maxCol ranges for the given row
-	ranges := [][2]int{}
+	ranges := []Range{}
 	for _, s := range sensors {
-		minCol, maxCol, inBounds := s.BoundsAtRow(row)
+		r, inBounds := s.RangeAtRow(row)
 		if inBounds {
-			ranges = append(ranges, [2]int{minCol, maxCol})
+			ranges = append(ranges, r)
 		}
 	}
 
 	// Sort the ranges by their minCol, otherwise the merging below will not work
 	sort.Slice(ranges, func(i, j int) bool {
-		return ranges[i][0] < ranges[j][0]
+		return ranges[i].Start < ranges[j].Start
 	})
 
 	// Simplify the ranges by merging those that overlap
 	// We can do this in a single pass now that the ranges have been sorted
-	merged := [][2]int{}
+	merged := []Range{}
 	for _, r := range ranges {
 		if len(merged) == 0 {
 			merged = append(merged, r)
@@ -96,8 +94,8 @@ func getMergedRanges(sensors []Sensor, row int) [][2]int {
 		}
 
 		last := merged[len(merged)-1]
-		if r[0] <= last[1]+1 {
-			merged[len(merged)-1][1] = utils.Max(last[1], r[1])
+		if r.Start <= last.End+1 {
+			merged[len(merged)-1].End = utils.Max(last.End, r.End)
 		} else {
 			merged = append(merged, r)
 		}
@@ -105,16 +103,10 @@ func getMergedRanges(sensors []Sensor, row int) [][2]int {
 	return merged
 }
 
-func getInput() ([]Sensor, Bounds) {
+func getInput() []Sensor {
 	lines, _ := utils.ReadLines(f, "input.txt")
 
 	sensors := []Sensor{}
-	bounds := Bounds{
-		MinCol: math.MaxInt,
-		MaxCol: math.MinInt,
-		MinRow: math.MaxInt,
-		MaxRow: math.MinInt,
-	}
 	for _, line := range lines {
 		var sensorRow, sensorCol, beaconRow, beaconCol, reach int
 		fmt.Sscanf(line, "Sensor at x=%d, y=%d: closest beacon is at x=%d, y=%d", &sensorCol, &sensorRow, &beaconCol, &beaconRow)
@@ -125,17 +117,8 @@ func getInput() ([]Sensor, Bounds) {
 			Col:   sensorCol,
 			Reach: reach,
 		})
-
-		bounds.MinCol = utils.Min(bounds.MinCol, sensorCol-reach)
-		bounds.MaxCol = utils.Max(bounds.MaxCol, sensorCol+reach)
-		bounds.MinRow = utils.Min(bounds.MinRow, sensorRow-reach)
-		bounds.MaxRow = utils.Max(bounds.MaxRow, sensorRow+reach)
 	}
-	return sensors, bounds
-}
-
-func square(x int) float64 {
-	return float64(x * x)
+	return sensors
 }
 
 func manhattanDistance(col1, row1, col2, row2 int) int {
