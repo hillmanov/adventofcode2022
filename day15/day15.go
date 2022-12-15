@@ -44,17 +44,27 @@ func Part1() any {
 func Part2() any {
 	sensors, _ := getInput()
 
-	var beaconRow, beaconCol int
-	for row := 0; row < 4_000_000; row++ {
+	searchRow := func(row int, c chan int) {
 		ranges := getMergedRanges(sensors, row)
 		if len(ranges) == 2 { // We found the row, we can find the column by look at the ranges
-			beaconRow = row
-			beaconCol = ranges[0][1] + 1
-			break
+			beaconRow := row
+			beaconCol := ranges[0][1] + 1
+			c <- beaconCol*4_000_000 + beaconRow
 		}
 	}
 
-	return beaconCol*4_000_000 + beaconRow
+	c := make(chan int, 1)
+	for row := 0; row < 4_000_000/2; row++ {
+		go searchRow(row, c)
+		go searchRow(4_000_000-row, c)
+	}
+
+	select {
+	case <-c:
+		fmt.Println("Done!")
+	}
+
+	return 1
 }
 
 func main() {
