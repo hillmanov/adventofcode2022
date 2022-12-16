@@ -5,8 +5,6 @@ import (
 	"embed"
 	"fmt"
 	"sort"
-
-	"github.com/pkg/profile"
 )
 
 //go:embed input.txt
@@ -24,7 +22,7 @@ type Sensor struct {
 func (s Sensor) RangeAtRow(row int) (r Range, inBounds bool) {
 	colDelta := s.Col - (s.Col + utils.Abs(s.Row-row) - s.Reach)
 	if colDelta < 0 {
-		return Range{}, false
+		return Range{0, 0}, false
 	}
 	return Range{
 		s.Col - colDelta,
@@ -44,17 +42,21 @@ func Part2() any {
 	result := -1
 	min, max := 0, 4_000_000
 
+	// Slightly faster, but much more complex way for finding the x
 	searchRow := func(row int) {
 		for x := min; x <= max; {
 			sensorFound := false
+
 			for _, s := range sensors {
 				if rangeForRow, inBounds := s.RangeAtRow(row); inBounds && between(x, rangeForRow.Start, rangeForRow.End) {
 					x = utils.Max(x, rangeForRow.End+1)
 					sensorFound = true
 				}
 			}
+
 			if !sensorFound {
 				result = x*max + row
+				break
 			}
 		}
 	}
@@ -71,11 +73,10 @@ func Part2() any {
 }
 
 func main() {
-	defer profile.Start().Stop()
-	// part1Solution := Part1()
+	part1Solution := Part1()
 	part2Solution := Part2()
 
-	// fmt.Printf("Day 15: Part 1: = %+v\n", part1Solution)
+	fmt.Printf("Day 15: Part 1: = %+v\n", part1Solution)
 	fmt.Printf("Day 15: Part 2: = %+v\n", part2Solution)
 }
 
