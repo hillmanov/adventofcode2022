@@ -64,9 +64,12 @@ func Part2() any {
 	// Search from both sides
 	for row := 0; row < max/2; row++ {
 		if result == -1 {
-			go searchRow(row)
-			go searchRow(max - row)
+			go func(row int) {
+				searchRow(row)
+				searchRow(max - row)
+			}(row)
 		}
+
 	}
 
 	return result
