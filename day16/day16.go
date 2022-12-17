@@ -27,6 +27,12 @@ type Move struct {
 	TotalPressure int
 }
 
+type ValveAtMinute struct {
+	Name          string
+	Minute        int
+	TotalPressure int
+}
+
 func (v Valve) TotalPressure() int {
 	if v.Open {
 		return v.FlowRate * (30 - v.OpenedAtMinute)
@@ -84,6 +90,22 @@ func Part1() any {
 		sum += valve.TotalPressure()
 	}
 	fmt.Printf("sum = %+v\n", sum)
+
+	valvesAtMinute := map[int][]ValveAtMinute{}
+
+	for i := 0; i <= 30; i++ {
+		valvesAtMinute[i] = []ValveAtMinute{}
+		for _, valve := range valves {
+			valveAtMinute := ValveAtMinute{
+				Name:          valve.Name,
+				Minute:        i,
+				TotalPressure: valve.FlowRate * (30 - i),
+			}
+			valvesAtMinute[i] = append(valvesAtMinute[i], valveAtMinute)
+			fmt.Printf("valveAtMinute = %+v\n", valveAtMinute)
+		}
+		fmt.Println("------------------------------")
+	}
 
 	return nil
 }

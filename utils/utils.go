@@ -144,7 +144,7 @@ func UniqueOf[T comparable](collection []T) []T {
 	return unique
 }
 
-func CopfOf[T any](collection []T) []T {
+func CopyOf[T any](collection []T) []T {
 	copf := make([]T, len(collection))
 	copy(copf, collection)
 	return copf
@@ -179,4 +179,9 @@ func Reverse[T any](collection []T) []T {
 
 func Pop[T any](collection []T) (T, []T) {
 	return collection[0], collection[1:]
+}
+
+func Shift[T any](collection []T, value T) []T {
+	collection = append([]T{value}, collection...)
+	return collection
 }

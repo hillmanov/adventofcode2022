@@ -115,3 +115,11 @@ func TestReverse(t *testing.T) {
 		t.Error("Reverse([]int{1, 2, 3, 4, 5, 6})[0] != 6")
 	}
 }
+
+func TestPop(t *testing.T) {
+	collection := []int{1, 2, 3, 4, 5, 6}
+	value, collection := Pop(collection)
+	if value != 6 && collection[0] != 2 {
+		t.Error("Pop([]int{1, 2, 3, 4, 5, 6}) != (6, []int{2, 3, 4, 5, 6})")
+	}
+}
