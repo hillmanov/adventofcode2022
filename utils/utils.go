@@ -176,3 +176,7 @@ func Reverse[T any](collection []T) []T {
 	}
 	return collection
 }
+
+func Pop[T any](collection []T) (T, []T) {
+	return collection[0], collection[1:]
+}

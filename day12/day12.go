@@ -58,7 +58,7 @@ func BFS(grid Grid, start Square, terminator terminatorFunc, validateMove moveVa
 			return -1, false
 		}
 
-		current, Q = pop(Q)
+		current, Q = utils.Pop(Q)
 		if !visited[current] {
 			visited[current] = true
 			if terminator(current) {
@@ -126,10 +126,6 @@ func getInput() (start Square, end Square, grid Grid) {
 	}
 
 	return start, end, grid
-}
-
-func pop(list []Square) (Square, []Square) {
-	return list[0], list[1:]
 }
 
 func up(a, b int) bool {
