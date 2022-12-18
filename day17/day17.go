@@ -31,16 +31,15 @@ func (c Chamber) floorOrHighestRock() int {
 }
 
 func (c Chamber) Window(endOfWindow, size int) []uint {
-	// fmt.Printf("size = %+v\n", size)
-	// if size == 1 {
-	// 	return []uint{c[endOfWindow]}
-	// }
-	return c[endOfWindow-size : endOfWindow]
+	return c[utils.Max(endOfWindow-size, 0):endOfWindow]
 }
 
 func (c Chamber) Dump() {
 	for row := range c {
-		fmt.Printf("|%07b|\n", c[row])
+		row := fmt.Sprintf("|%07b|", c[row])
+		row = strings.ReplaceAll(row, "0", ".")
+		row = strings.ReplaceAll(row, "1", "#")
+		fmt.Printf("%s\n", row)
 	}
 }
 
@@ -78,31 +77,30 @@ func (s Shape) String() string {
 	return str
 }
 
-func (s Shape) shiftRight() Shape {
+func (s Shape) shift(direction string) Shape {
 	shifted := utils.CopyOf(s)
-	for row := range s {
-		if bits.OnesCount(s[row]>>1) != bits.OnesCount(s[row]) {
-			return s
+
+	switch direction {
+	case ">":
+		for row := range s {
+			if bits.OnesCount(s[row]>>1) != bits.OnesCount(s[row]) {
+				return s
+			}
 		}
-	}
 
-	for row := range s {
-		shifted[row] >>= 1
-	}
-
-	return shifted
-}
-
-func (s Shape) shiftLeft() Shape {
-	shifted := utils.CopyOf(s)
-	for row := range s {
-		if bits.OnesCount(s[row]<<1&mask) != bits.OnesCount(s[row]) {
-			return s
+		for row := range s {
+			shifted[row] >>= 1
 		}
-	}
+	case "<":
+		for row := range s {
+			if bits.OnesCount(s[row]<<1&mask) != bits.OnesCount(s[row]) {
+				return s
+			}
+		}
 
-	for row := range s {
-		shifted[row] <<= 1
+		for row := range s {
+			shifted[row] <<= 1
+		}
 	}
 
 	return shifted
@@ -110,21 +108,13 @@ func (s Shape) shiftLeft() Shape {
 
 func Part1() any {
 	jetPattern := getInput()
-	// Steps:
-	// Get next shape
-	// Position 3 above top of rock/floor of chamber
-	// Repeat:
-	// Shift left/right
-	// Move down
-	// Check for collision with rock/floow of chamber
 
-	chamber := Chamber{
+	chamber := Chamber{ // Initialize with floor
 		getInt("1111111"),
 	}
 
-	rocksFallen := 0
 	jetIndex := 0
-	for rocksFallen < 3 {
+	for rocksFallen := 0; rocksFallen < 2022; rocksFallen++ {
 		s := shapes[rocksFallen%len(shapes)]
 
 		// Pad the top if we need room (This can potentially add more room to the top than needed, but I am not worrying about that now)
@@ -144,17 +134,13 @@ func Part1() any {
 			jetDirection := jetPattern[jetIndex%len(jetPattern)]
 			jetIndex++
 
-			switch jetDirection {
-			case ">":
-				s = s.shiftRight()
-			case "<":
-				s = s.shiftLeft()
+			// Try to move left or right
+			if !detectCollision(chamber.Window(bottomOfShape, len(s)), s.shift(jetDirection)) {
+				s = s.shift(jetDirection)
 			}
 
-			fmt.Printf("Shape: = \n%s\n", s)
+			// Try to move down
 			if detectCollision(chamber.Window(bottomOfShape+1, len(s)), s) {
-				// We've hit something!
-				// We can't move down, so we need to add the shape to the chamber
 				for row := range s {
 					chamber[bottomOfShape-len(s)+row] |= s[row]
 				}
@@ -163,14 +149,22 @@ func Part1() any {
 
 			bottomOfShape++
 		}
-		rocksFallen++
 	}
 
-	chamber.Dump()
 	return nil
 }
 
 func Part2() any {
+	jetPattern := getInput()
+	fmt.Printf("len(jetPattern) = %+v\n", len(jetPattern))
+
+	// Run len(shapes) * len(jetPattern) times. Get the height at that point.
+	// Multiply the height by how many times it can go into 1_000_000_000_000
+	// Get the top few row of the chamber at that point.
+	// Initialize the chamber with that top window,
+	// Run the stuff again however many times are remaining from the initial division. See how high it go.
+	// Add some numbers, and you are done!
+
 	return nil
 }
 
@@ -198,5 +192,5 @@ func getInt(binary string) uint {
 
 func getInput() []string {
 	contents, _ := utils.ReadContents(f, "input.txt")
-	return strings.Split(contents, "")
+	return strings.Split(strings.Trim(contents, "\n"), "")
 }
