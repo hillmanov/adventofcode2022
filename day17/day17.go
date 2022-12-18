@@ -12,25 +12,14 @@ import (
 //go:embed input.txt
 var f embed.FS
 
-var mask = getInt("1111111")
-var clearMask = getInt("0000000")
+var mask = b("1111111")
+var clearMask = b("0000000")
 
-type Shape []uint
+type Rock []uint
 
 type Chamber []uint
 
-func (c Chamber) floorOrHighestRock() int {
-	var floorOrHighestRock int
-	for row := range c {
-		if bits.OnesCount(c[row]) > 0 {
-			floorOrHighestRock = row
-			break
-		}
-	}
-	return floorOrHighestRock
-}
-
-func (c Chamber) Window(endOfWindow, size int) []uint {
+func (c Chamber) Window(endOfWindow, size int) Chamber {
 	return c[utils.Max(endOfWindow-size, 0):endOfWindow]
 }
 
@@ -43,33 +32,42 @@ func (c Chamber) Dump() {
 	}
 }
 
-var shapes = []Shape{
+func (c Chamber) floorOrHighestRock() int {
+	for row := range c {
+		if c[row] != 0 {
+			return row
+		}
+	}
+	return -1
+}
+
+var rockShapes = []Rock{
 	{
-		getInt("0011110"), // Horizontal line
+		b("0011110"), // Horizontal line
 	},
 	{
-		getInt("0001000"), // Plus
-		getInt("0011100"),
-		getInt("0001000"),
+		b("0001000"), // Plus
+		b("0011100"),
+		b("0001000"),
 	},
 	{
-		getInt("0000100"), // L (backwards)
-		getInt("0000100"),
-		getInt("0011100"),
+		b("0000100"), // L (backwards)
+		b("0000100"),
+		b("0011100"),
 	},
 	{
-		getInt("0010000"), // Vertical line
-		getInt("0010000"),
-		getInt("0010000"),
-		getInt("0010000"),
+		b("0010000"), // Vertical line
+		b("0010000"),
+		b("0010000"),
+		b("0010000"),
 	},
 	{
-		getInt("0011000"), // Square
-		getInt("0011000"),
+		b("0011000"), // Square
+		b("0011000"),
 	},
 }
 
-func (s Shape) String() string {
+func (s Rock) String() string {
 	var str string
 	for row := range s {
 		str += fmt.Sprintf("%07b\n", s[row])
@@ -77,7 +75,7 @@ func (s Shape) String() string {
 	return str
 }
 
-func (s Shape) shift(direction string) Shape {
+func (s Rock) shift(direction string) Rock {
 	shifted := utils.CopyOf(s)
 
 	switch direction {
@@ -109,54 +107,16 @@ func (s Shape) shift(direction string) Shape {
 func Part1() any {
 	jetPattern := getInput()
 
-	chamber := Chamber{ // Initialize with floor
-		getInt("1111111"),
-	}
+	chamber := Chamber(make([]uint, 2022*3)) // Number of rocks * number of shapes. If we pad the slice a lot, we save a LOT of time.
+	chamber[len(chamber)-1] = b("1111111")   // Create a floor
 
-	jetIndex := 0
-	for rocksFallen := 0; rocksFallen < 2022; rocksFallen++ {
-		s := shapes[rocksFallen%len(shapes)]
-
-		// Pad the top if we need room (This can potentially add more room to the top than needed, but I am not worrying about that now)
-		// Find the row of the top rock/floor of the chamber
-		floorOrHighestRock := chamber.floorOrHighestRock()
-
-		for i := 0; i < (len(s)+2)-floorOrHighestRock; i++ {
-			chamber = utils.Shift(chamber, getInt("0000000"))
-		}
-
-		floorOrHighestRock = chamber.floorOrHighestRock()
-
-		// We start our shape 3 rows above the highest rock/floor of chamber
-		bottomOfShape := floorOrHighestRock - 3
-
-		for {
-			jetDirection := jetPattern[jetIndex%len(jetPattern)]
-			jetIndex++
-
-			// Try to move left or right
-			if !detectCollision(chamber.Window(bottomOfShape, len(s)), s.shift(jetDirection)) {
-				s = s.shift(jetDirection)
-			}
-
-			// Try to move down
-			if detectCollision(chamber.Window(bottomOfShape+1, len(s)), s) {
-				for row := range s {
-					chamber[bottomOfShape-len(s)+row] |= s[row]
-				}
-				break
-			}
-
-			bottomOfShape++
-		}
-	}
-
-	return nil
+	chamber = run(chamber, jetPattern, 2022)
+	return len(chamber) - chamber.floorOrHighestRock() - 1
 }
 
 func Part2() any {
 	jetPattern := getInput()
-	fmt.Printf("len(jetPattern) = %+v\n", len(jetPattern))
+	fmt.Printf("len(jetPattern) = %+v\n", len(jetPattern)*len(rockShapes))
 
 	// Run len(shapes) * len(jetPattern) times. Get the height at that point.
 	// Multiply the height by how many times it can go into 1_000_000_000_000
@@ -168,15 +128,42 @@ func Part2() any {
 	return nil
 }
 
-func main() {
-	part1Solution := Part1()
-	part2Solution := Part2()
+func run(chamber Chamber, jetPattern []string, numRocks int) Chamber {
+	floorOrHighestRock := chamber.floorOrHighestRock()
 
-	fmt.Printf("Day 17: Part 1: = %+v\n", part1Solution)
-	fmt.Printf("Day 17: Part 2: = %+v\n", part2Solution)
+	jetIndex := 0
+	for rocksFallen := 0; rocksFallen < numRocks; rocksFallen++ {
+		rock := rockShapes[rocksFallen%len(rockShapes)]
+
+		// We start our shape 3 rows above the highest rock/floor of chamber
+		bottomOfRock := floorOrHighestRock - 3
+
+		for {
+			jetDirection := jetPattern[jetIndex%len(jetPattern)]
+			jetIndex++
+
+			// Try to move left or right
+			if !detectCollision(chamber.Window(bottomOfRock, len(rock)), rock.shift(jetDirection)) {
+				rock = rock.shift(jetDirection)
+			}
+
+			// Try to move down
+			if detectCollision(chamber.Window(bottomOfRock+1, len(rock)), rock) {
+				for row := range rock {
+					chamber[bottomOfRock-len(rock)+row] |= rock[row]
+					floorOrHighestRock = utils.Min(floorOrHighestRock, bottomOfRock-len(rock))
+				}
+				break
+			}
+
+			bottomOfRock++
+		}
+	}
+
+	return chamber
 }
 
-func detectCollision(chamberWindow []uint, s Shape) bool {
+func detectCollision(chamberWindow Chamber, s Rock) bool {
 	for row := range chamberWindow {
 		if bits.OnesCount(chamberWindow[row]^s[row]) < bits.OnesCount(chamberWindow[row])+bits.OnesCount(s[row]) {
 			return true
@@ -185,9 +172,17 @@ func detectCollision(chamberWindow []uint, s Shape) bool {
 	return false
 }
 
-func getInt(binary string) uint {
+func b(binary string) uint {
 	i, _ := strconv.ParseInt(binary, 2, 64)
 	return uint(i)
+}
+
+func main() {
+	part1Solution := Part1()
+	part2Solution := Part2()
+
+	fmt.Printf("Day 17: Part 1: = %+v\n", part1Solution)
+	fmt.Printf("Day 17: Part 2: = %+v\n", part2Solution)
 }
 
 func getInput() []string {
