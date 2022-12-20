@@ -185,3 +185,28 @@ func Shift[T any](collection []T, value T) []T {
 	collection = append([]T{value}, collection...)
 	return collection
 }
+
+func Permutations[T any](collection []T) [][]T {
+	var helper func([]T, int)
+	res := [][]T{}
+
+	helper = func(collection []T, n int) {
+		if n == 1 {
+			tmp := make([]T, len(collection))
+			copy(tmp, collection)
+			res = append(res, tmp)
+		} else {
+			for i := 0; i < n; i++ {
+				helper(collection, n-1)
+				if n%2 == 1 {
+					collection[0], collection[n-1] = collection[n-1], collection[0]
+				} else {
+					collection[i], collection[n-1] = collection[n-1], collection[i]
+				}
+			}
+		}
+	}
+
+	helper(collection, len(collection))
+	return res
+}

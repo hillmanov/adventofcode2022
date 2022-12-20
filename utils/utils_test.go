@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -121,5 +122,12 @@ func TestPop(t *testing.T) {
 	value, collection := Pop(collection)
 	if value != 6 && collection[0] != 2 {
 		t.Error("Pop([]int{1, 2, 3, 4, 5, 6}) != (6, []int{2, 3, 4, 5, 6})")
+	}
+}
+
+func TestPermutations(t *testing.T) {
+	fmt.Printf("Permutations([]int{1, 2, 3} = %+v\n", Permutations([]int{1, 2, 3}))
+	if len(Permutations([]int{1, 2, 3})) != 6 {
+		t.Error("len(Permutations([]int{1, 2, 3})) != 6")
 	}
 }
