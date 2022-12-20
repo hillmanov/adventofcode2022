@@ -4,137 +4,128 @@ import (
 	"adventofcode/utils"
 	"embed"
 	"fmt"
-	"math"
-	"sort"
 	"strings"
 )
 
 //go:embed input.txt
 var f embed.FS
-var max = math.MinInt
-var seen = map[int]bool{}
 
 type Valve struct {
-	Name           string
-	FlowRate       int
-	Open           bool
-	OpenedAtMinute int
+	Name     string
+	FlowRate int
+	Mask     int
 }
 
-type Move struct {
-	Valve         string
-	MinutesAway   int
-	TotalPressure int
-}
-
-type ValveAtMinute struct {
-	Name          string
-	Minute        int
-	TotalPressure int
-}
-
-func (v Valve) TotalPressure() int {
-	if v.Open {
-		return v.FlowRate * (30 - v.OpenedAtMinute)
-	}
-	return 0
-}
-
-type Connections map[string][]string
 type Valves map[string]Valve
+type Connections map[string][]string
 
 func Part1() any {
-	valves, connections := getInput()
-	minutes := 1
+	allValves, connections := getInput()
 
-	currentState := "AA"
+	valves := initializeRelevantValves(allValves)
+	minutesBetween := getMinutesBetweenMap(connections, allValves)
+	pressuresAchieved := map[int]int{}
+	pressuresAchieved = visit("AA", 30, 0, 0, pressuresAchieved, minutesBetween, valves)
 
-	for minutes <= 30 {
-		if currentState != "AA" {
-			newState := valves[currentState]
-			newState.Open = true
-			newState.OpenedAtMinute = minutes
-			valves[currentState] = newState
-			minutes++
-		}
-
-		moves := []Move{}
-
-		for _, valve := range valves {
-			if valve.Name != currentState && !valve.Open { // No need to look at valves that are already open
-				move := Move{}
-				move.Valve = valve.Name
-				minutesAway, _ := minutesTo(connections, currentState, valve.Name)
-				move.MinutesAway = minutesAway
-				move.TotalPressure = valve.FlowRate * (30 - minutes - minutesAway)
-				moves = append(moves, move)
-			}
-		}
-
-		sort.Slice(moves, func(i, j int) bool {
-			return moves[i].TotalPressure > moves[j].TotalPressure
-		})
-
-		if len(moves) > 0 {
-			bestMove := moves[0]
-			currentState = bestMove.Valve
-			minutes += bestMove.MinutesAway
-		} else {
-			minutes++
-		}
+	max := 0
+	for _, pressure := range pressuresAchieved {
+		max = utils.Max(max, pressure)
 	}
 
-	sum := 0
-	for _, valve := range valves {
-		fmt.Printf("valve = %+v\n", valve)
-		sum += valve.TotalPressure()
-	}
-	fmt.Printf("sum = %+v\n", sum)
-
-	valvesAtMinute := map[int][]ValveAtMinute{}
-
-	for i := 0; i <= 30; i++ {
-		valvesAtMinute[i] = []ValveAtMinute{}
-		for _, valve := range valves {
-			valveAtMinute := ValveAtMinute{
-				Name:          valve.Name,
-				Minute:        i,
-				TotalPressure: valve.FlowRate * (30 - i),
-			}
-			valvesAtMinute[i] = append(valvesAtMinute[i], valveAtMinute)
-			fmt.Printf("valveAtMinute = %+v\n", valveAtMinute)
-		}
-		fmt.Println("------------------------------")
-	}
-
-	return nil
+	return max
 }
 
 func Part2() any {
-	return nil
+	allValves, connections := getInput()
+
+	valves := initializeRelevantValves(allValves)
+	minutesBetween := getMinutesBetweenMap(connections, allValves)
+	pressuresAchieved := map[int]int{}
+	pressuresAchieved = visit("AA", 26, 0, 0, pressuresAchieved, minutesBetween, valves)
+
+	// Now we go through each key of the pressuresAchieved map, find all the combinations of keys (which is a bit mask that describes which valves were used to get the pressure) that `&` together to equal 0,
+	// and sum up their total pressure.
+	// Get the max of all these combinations.
+	maxPressureTogetherAchieved := 0
+	for myValves := range pressuresAchieved {
+		for elephantValves := range pressuresAchieved {
+			if myValves&elephantValves == 0 {
+				maxPressureTogetherAchieved = utils.Max(maxPressureTogetherAchieved, pressuresAchieved[myValves]+pressuresAchieved[elephantValves])
+			}
+		}
+	}
+	return maxPressureTogetherAchieved
 }
 
-func minutesTo(connections Connections, start string, end string) (int, bool) {
+func initializeRelevantValves(allValves Valves) Valves {
+	valves := Valves{}
+	i := 0
+	for _, valve := range allValves {
+		if valve.FlowRate > 0 {
+			valve.Mask = 1 << i
+			valves[valve.Name] = valve
+			i++
+		}
+	}
+	return valves
+}
+
+func getMinutesBetweenMap(connections Connections, valves Valves) map[string]int {
+	minutesBetween := map[string]int{}
+	for i := range valves {
+		for j := range valves {
+			minutesBetween[i+j] = minutesTo(connections, i, j)
+		}
+	}
+	return minutesBetween
+}
+
+func visit(
+	currentValve string,
+	minutesRemaining int,
+	valvesState int,
+	currentFlow int,
+	pressuresAchieved map[int]int,
+	minutesBetween map[string]int,
+	valves Valves,
+) map[int]int {
+
+	pressuresAchieved[valvesState] = utils.Max(pressuresAchieved[valvesState], currentFlow)
+	for nextValve := range valves {
+		newMinutesRemaining := minutesRemaining - minutesBetween[currentValve+nextValve] - 1
+		if valves[nextValve].Mask&valvesState > 0 || newMinutesRemaining <= 0 { // Check to see if we have been there, and if we can make it on time
+			continue
+		}
+		visit(
+			nextValve,
+			newMinutesRemaining,
+			valvesState|valves[nextValve].Mask,
+			currentFlow+newMinutesRemaining*valves[nextValve].FlowRate,
+			pressuresAchieved,
+			minutesBetween,
+			valves,
+		)
+	}
+	return pressuresAchieved
+}
+
+func minutesTo(connections Connections, start string, end string) int {
 	Q := []string{start}
 	visited := map[string]bool{}
-	distances := map[string]int{}
+	minutesBetween := map[string]int{}
 
 	var current string
 	for {
-		if len(Q) == 0 {
-			return -1, false
-		}
-
 		current, Q = utils.Pop(Q)
 		if !visited[current] {
 			visited[current] = true
 			if current == end {
-				return distances[current], true
+				return minutesBetween[current]
 			}
 			for _, move := range connections[current] {
 				if !visited[move] {
 					Q = append(Q, move)
-					distances[move] = distances[current] + 1
+					minutesBetween[move] = minutesBetween[current] + 1
 				}
 			}
 		}
