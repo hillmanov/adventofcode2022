@@ -124,22 +124,7 @@ func Part1() any {
 }
 
 func Part2() any {
-	jetPattern := getInput()
-
-	magicNumber := len(jetPattern) * len(rockShapes) // Number of rocks * number of shapes. If we pad the slice a lot, we save a LOT of time.
-
-	chamber := Chamber(make([]uint, magicNumber*2)) // Number of rocks * number of shapes. If we pad the slice a lot, we save a LOT of time.
-	chamber[len(chamber)-1] = b("1111111")          // Create a floor
-
-	chamber = run(chamber, jetPattern, magicNumber)
-	return len(chamber) - chamber.floorOrHighestRock() - 1
-
-	// Run len(shapes) * len(jetPattern) times. Get the height at that point.
-	// Multiply the height by how many times it can go into 1_000_000_000_000
-	// Get the top few row of the chamber at that point.
-	// Initialize the chamber with that top window,
-	// Run the stuff again however many times are remaining from the initial division. See how high it go.
-	// Add some numbers, and you are done!
+	return nil
 }
 
 func run(chamber Chamber, jetPattern []string, iterations int) Chamber {
@@ -151,11 +136,6 @@ func run(chamber Chamber, jetPattern []string, iterations int) Chamber {
 
 		// We start our shape 3 rows above the highest rock/floor of chamber
 		bottomOfRock := floorOrHighestRock - 3
-
-		possibleNewFloor := chamber.floorOrPotentialNewFloor()
-		if possibleNewFloor != len(chamber)-1 {
-			fmt.Println("possibleNewFloor", possibleNewFloor)
-		}
 
 		for {
 			jetDirection := jetPattern[jetIndex%len(jetPattern)]
@@ -176,9 +156,6 @@ func run(chamber Chamber, jetPattern []string, iterations int) Chamber {
 			}
 
 			bottomOfRock++
-		}
-		if hasRepeatingPattern(chamber) {
-			fmt.Println("Pattern detected!")
 		}
 	}
 
