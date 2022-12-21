@@ -43,13 +43,17 @@ func Part2() any {
 	pressuresAchieved := map[int]int{}
 	pressuresAchieved = visit("AA", 26, 0, 0, pressuresAchieved, minutesBetween, valves)
 
-	// Now we go through each key of the pressuresAchieved map, find all the combinations of keys (which is a bit mask that describes which valves were used to get the pressure) that `&` together to equal 0,
-	// and sum up their total pressure.
-	// Get the max of all these combinations.
+	valveCombos := []int{}
+	for valveComb := range pressuresAchieved {
+		valveCombos = append(valveCombos, valveComb)
+	}
+
 	maxPressureTogetherAchieved := 0
-	for myValves := range pressuresAchieved {
-		for elephantValves := range pressuresAchieved {
-			if myValves&elephantValves == 0 {
+	for i := 0; i < len(valveCombos); i++ {
+		myValves := valveCombos[i]
+		for j := i + 1; j < len(valveCombos); j++ {
+			elephantValves := valveCombos[j]
+			if myValves&elephantValves == 0 { // Make sure there are no shared valves between the two
 				maxPressureTogetherAchieved = utils.Max(maxPressureTogetherAchieved, pressuresAchieved[myValves]+pressuresAchieved[elephantValves])
 			}
 		}
@@ -93,9 +97,11 @@ func visit(
 	pressuresAchieved[valvesState] = utils.Max(pressuresAchieved[valvesState], currentFlow)
 	for nextValve := range valves {
 		newMinutesRemaining := minutesRemaining - minutesBetween[currentValve+nextValve] - 1
+
 		if valves[nextValve].Mask&valvesState > 0 || newMinutesRemaining <= 0 { // Check to see if we have been there, and if we can make it on time
 			continue
 		}
+
 		visit(
 			nextValve,
 			newMinutesRemaining,
