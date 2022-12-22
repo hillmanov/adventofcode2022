@@ -58,7 +58,7 @@ var f embed.FS
 
 func Part1() any {
 	monkeysByName := getInput()
-	return monkeysByName["root"].GetValue(monkeysByName)
+	return int(monkeysByName["root"].GetValue(monkeysByName))
 }
 
 func Part2() any {
@@ -68,13 +68,9 @@ func Part2() any {
 	human := monkeysByName["humn"]
 	root.Operation = "="
 
-	fmt.Printf("root = %+v\n", root)
-	fmt.Printf("human = %+v\n", human)
-
 	minMax := []float64{float64(math.MinInt), float64(math.MaxInt)}
 	human.Number = (minMax[0] + minMax[1]) / 2
 	for root.GetValue(monkeysByName) != 0 {
-		fmt.Printf("root.GetValue(monkeysByName) = %+v\n", root.GetValue(monkeysByName))
 		if root.GetValue(monkeysByName) > 0 {
 			minMax[0] = human.Number
 			human.Number = (minMax[0] + minMax[1]) / 2
@@ -83,24 +79,7 @@ func Part2() any {
 			human.Number = (minMax[0] + minMax[1]) / 2
 		}
 	}
-
-	// leftValue := monkeysByName[root.Left].GetValue(monkeysByName)
-	// rightValue := monkeysByName[root.Right].GetValue(monkeysByName)
-
-	// fmt.Printf("leftValue = %+v\n", leftValue)
-	// fmt.Printf("rightValue = %+v\n", rightValue)
-
-	// human.Number++
-	// fmt.Println("")
-
-	// leftValue = monkeysByName[root.Left].GetValue(monkeysByName)
-	// rightValue = monkeysByName[root.Right].GetValue(monkeysByName)
-
-	// fmt.Printf("leftValue = %+v\n", leftValue)
-	// fmt.Printf("rightValue = %+v\n", rightValue)
-
-	// fmt.Printf("root.GetValue(monkeysByName) = %+v\n", root.GetValue(monkeysByName))
-	return human.Number
+	return int(human.Number)
 }
 
 func main() {
