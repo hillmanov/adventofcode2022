@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -125,8 +124,15 @@ func TestPop(t *testing.T) {
 	}
 }
 
+func TestRemoveAtIndex(t *testing.T) {
+	collection := []int{1, 2, 3, 4, 5, 6}
+	collection = RemoveAtIndex(collection, 1)
+	if len(collection) != 5 {
+		t.Error("len(RemoveAtIndex([]int{1, 2, 3, 4, 5, 6}, 2)) != 5")
+	}
+}
+
 func TestPermutations(t *testing.T) {
-	fmt.Printf("Permutations([]int{1, 2, 3} = %+v\n", Permutations([]int{1, 2, 3}))
 	if len(Permutations([]int{1, 2, 3})) != 6 {
 		t.Error("len(Permutations([]int{1, 2, 3})) != 6")
 	}
