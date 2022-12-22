@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"embed"
 	"strconv"
+	"strings"
 )
 
 type Number interface {
@@ -66,7 +67,7 @@ func RemoveAtIndex[T any](collection []T, index int) []T {
 }
 
 func ParseInt(s string) int {
-	v, err := strconv.Atoi(s)
+	v, err := strconv.Atoi(strings.Trim(s, " "))
 	if err != nil {
 		panic(err)
 	}
