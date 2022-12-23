@@ -73,11 +73,10 @@ func Part2() any {
 	for root.GetValue(monkeysByName) != 0 {
 		if root.GetValue(monkeysByName) > 0 {
 			minMax[0] = human.Number
-			human.Number = (minMax[0] + minMax[1]) / 2
 		} else {
 			minMax[1] = human.Number
-			human.Number = (minMax[0] + minMax[1]) / 2
 		}
+		human.Number = (minMax[0] + minMax[1]) / 2
 	}
 	return int(human.Number)
 }
