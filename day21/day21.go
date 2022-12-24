@@ -68,15 +68,15 @@ func Part2() any {
 	human := monkeysByName["humn"]
 	root.Operation = "="
 
-	minMax := []float64{float64(math.MinInt), float64(math.MaxInt)}
-	human.Number = (minMax[0] + minMax[1]) / 2
+	min, max := float64(math.MinInt), float64(math.MaxInt)
+	human.Number = (min + max) / 2
 	for root.GetValue(monkeysByName) != 0 {
 		if root.GetValue(monkeysByName) > 0 {
-			minMax[0] = human.Number
+			min = human.Number
 		} else {
-			minMax[1] = human.Number
+			max = human.Number
 		}
-		human.Number = (minMax[0] + minMax[1]) / 2
+		human.Number = (min + max) / 2
 	}
 	return int(human.Number)
 }
