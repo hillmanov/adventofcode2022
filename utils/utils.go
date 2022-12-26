@@ -3,6 +3,7 @@ package utils
 import (
 	"bufio"
 	"embed"
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -214,4 +215,8 @@ func Permutations[T any](collection []T) [][]T {
 
 	helper(collection, len(collection))
 	return res
+}
+
+func ClearScreen() {
+	fmt.Printf("\033[0;0H")
 }
