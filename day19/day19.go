@@ -51,7 +51,105 @@ func (r ResourceCounts) Copy() ResourceCounts {
 	return ResourceCounts(r)
 }
 
-func (b Blueprint) GeodeProductionAmount(minutes, oreRobotLimit, clayRobotLimit, obsidianRobotLimit int) int {
+var max = 0
+
+type State struct {
+	minute    int
+	resources ResourceCounts
+	robots    RobotCounts
+	blueprint Blueprint
+}
+
+var cache = map[State]int{}
+
+func (b Blueprint) GeodeProductionAmount(minute int, resources ResourceCounts, robots RobotCounts, results *[]int) {
+	if _, ok := cache[State{minute, resources, robots, b}]; ok {
+		return
+	}
+
+	for i := minute; i <= 24; i++ {
+		resources.oreCount += robots.oreRobots
+		resources.clayCount += robots.clayRobots
+		resources.obsidianCount += robots.obsidianRobots
+		resources.geodeCount += robots.geodeRobots
+
+		// Keep track of what things we CAN make
+		// Go through the list of each thing we can make and recursively call ourselves with the current state, minus the resources needed to make the thing
+
+		if resources.oreCount >= b.GeodeRobotOreCost && resources.obsidianCount >= b.GeodeRobotObsidianCost {
+			b.GeodeProductionAmount(i+1,
+				ResourceCounts{
+					oreCount:      resources.oreCount - b.GeodeRobotOreCost,
+					clayCount:     resources.clayCount,
+					obsidianCount: resources.obsidianCount - b.GeodeRobotObsidianCost,
+					geodeCount:    resources.geodeCount,
+				},
+				RobotCounts{
+					oreRobots:      robots.oreRobots,
+					clayRobots:     robots.clayRobots,
+					obsidianRobots: robots.obsidianRobots,
+					geodeRobots:    robots.geodeRobots + 1,
+				}, results)
+		}
+
+		if resources.oreCount >= b.ObsidianRobotOreCost && resources.clayCount >= b.ObsidianRobotClayCost {
+			b.GeodeProductionAmount(i+1,
+				ResourceCounts{
+					oreCount:      resources.oreCount - b.ObsidianRobotOreCost,
+					clayCount:     resources.clayCount - b.ObsidianRobotClayCost,
+					obsidianCount: resources.obsidianCount,
+					geodeCount:    resources.geodeCount,
+				},
+				RobotCounts{
+					oreRobots:      robots.oreRobots,
+					clayRobots:     robots.clayRobots,
+					obsidianRobots: robots.obsidianRobots + 1,
+					geodeRobots:    robots.geodeRobots,
+				}, results)
+		}
+
+		if resources.oreCount >= b.ClayRobotCost {
+			b.GeodeProductionAmount(i+1,
+				ResourceCounts{
+					oreCount:      resources.oreCount - b.ClayRobotCost,
+					clayCount:     resources.clayCount,
+					obsidianCount: resources.obsidianCount,
+					geodeCount:    resources.geodeCount,
+				},
+				RobotCounts{
+					oreRobots:      robots.oreRobots,
+					clayRobots:     robots.clayRobots + 1,
+					obsidianRobots: robots.obsidianRobots,
+					geodeRobots:    robots.geodeRobots,
+				}, results)
+		}
+		if resources.oreCount >= b.OreRobotCost {
+			b.GeodeProductionAmount(i+1,
+				ResourceCounts{
+					oreCount:      resources.oreCount - b.OreRobotCost,
+					clayCount:     resources.clayCount,
+					obsidianCount: resources.obsidianCount,
+					geodeCount:    resources.geodeCount,
+				},
+				RobotCounts{
+					oreRobots:      robots.oreRobots + 1,
+					clayRobots:     robots.clayRobots,
+					obsidianRobots: robots.obsidianRobots,
+					geodeRobots:    robots.geodeRobots,
+				}, results)
+		}
+	}
+
+	cache[State{minute, resources, robots, b}] = resources.geodeCount
+	fmt.Printf("resources = %+v\n", resources)
+
+	*results = append(*results, resources.geodeCount)
+}
+
+func Part1() any {
+	blueprints := getInput()
+
+	results := []int{}
 
 	resources := ResourceCounts{
 		oreCount:      0,
@@ -67,84 +165,7 @@ func (b Blueprint) GeodeProductionAmount(minutes, oreRobotLimit, clayRobotLimit,
 		geodeRobots:    0,
 	}
 
-	for i := 1; i <= minutes; i++ {
-		makingOreRobot := false
-		makingClayRobot := false
-		makingObsidianRobot := false
-		makingGeodeRobot := false
-
-		fmt.Printf("== Minute: %+v ==\n", i)
-		if resources.oreCount >= b.OreRobotCost && robots.oreRobots < oreRobotLimit {
-			fmt.Printf("Spend %d ore to start building a ore-collecting robot.\n", b.OreRobotCost)
-			resources.oreCount -= b.OreRobotCost
-			makingOreRobot = true
-		}
-
-		if resources.oreCount >= b.ClayRobotCost && robots.clayRobots < clayRobotLimit {
-			fmt.Printf("Spend %d ore to start building a clay-collecting robot.\n", b.ClayRobotCost)
-			resources.oreCount -= b.ClayRobotCost
-			makingClayRobot = true
-		}
-
-		if resources.oreCount >= b.ObsidianRobotOreCost && resources.clayCount >= b.ObsidianRobotClayCost && robots.obsidianRobots < obsidianRobotLimit {
-			fmt.Printf("Spend %d ore and %d clay to start building a obsidian-collecting robot.\n", b.ObsidianRobotOreCost, b.ObsidianRobotClayCost)
-			resources.oreCount -= b.ObsidianRobotOreCost
-			resources.clayCount -= b.ObsidianRobotClayCost
-			makingObsidianRobot = true
-		}
-
-		if resources.oreCount >= b.GeodeRobotOreCost && resources.obsidianCount >= b.GeodeRobotObsidianCost {
-			fmt.Printf("Spend %d ore and %d obsidian to start building a geode-collecting robot.\n", b.GeodeRobotOreCost, b.GeodeRobotObsidianCost)
-			resources.oreCount -= b.GeodeRobotOreCost
-			resources.obsidianCount -= b.GeodeRobotObsidianCost
-			makingGeodeRobot = true
-		}
-
-		resources.oreCount += robots.oreRobots
-		fmt.Printf("%d ore collecting robots collects %d ore; You now have %d ore.\n", robots.oreRobots, robots.oreRobots, resources.oreCount)
-
-		resources.clayCount += robots.clayRobots
-		if robots.clayRobots > 0 {
-			fmt.Printf("%d clay collecting robots collects %d clay; You now have %d clay.\n", robots.clayRobots, robots.clayRobots, resources.clayCount)
-		}
-
-		if robots.obsidianRobots > 0 {
-			fmt.Printf("%d obsidian collecting robots collects %d obsidian; You now have %d obsidian.\n", robots.obsidianRobots, robots.obsidianRobots, resources.obsidianCount)
-		}
-		resources.obsidianCount += robots.obsidianRobots
-
-		if robots.geodeRobots > 0 {
-			fmt.Printf("%d geode producing robots produces %d geode; You now have %d geode.\n", robots.geodeRobots, robots.geodeRobots, resources.geodeCount)
-		}
-		resources.geodeCount += robots.geodeRobots
-
-		if makingOreRobot {
-			robots.oreRobots++
-			fmt.Printf("The new ore collecting robot is ready. You now have %d of them.\n", robots.oreRobots)
-		}
-		if makingClayRobot {
-			robots.clayRobots++
-			fmt.Printf("The new clay collecting robot is ready. You now have %d of them.\n", robots.clayRobots)
-		}
-		if makingObsidianRobot {
-			robots.obsidianRobots++
-			fmt.Printf("The new obsidian collecting robot is ready. You now have %d of them.\n", robots.obsidianRobots)
-		}
-		if makingGeodeRobot {
-			robots.geodeRobots++
-			fmt.Printf("The new geode collecting robot is ready. You now have %d of them.\n", robots.geodeRobots)
-		}
-
-		fmt.Println()
-	}
-
-	return resources.geodeCount
-}
-
-func Part1() any {
-	blueprints := getInput()
-
-	blueprints[0].GeodeProductionAmount(24, 1, 3, 2)
+	blueprints[0].GeodeProductionAmount(1, resources, robots, &results)
 
 	// for _, blueprint := range blueprints {
 	// 	geodeAmount := getMaxConfiguration(blueprint)
@@ -152,22 +173,6 @@ func Part1() any {
 	// }
 
 	return nil
-}
-
-func getMaxConfiguration(b Blueprint) int {
-	max := 0
-	for oreRobotLimit := 1; oreRobotLimit <= 24; oreRobotLimit++ {
-		for clayRobotLimit := 1; clayRobotLimit <= 24; clayRobotLimit++ {
-			for obsidianRobotLimit := 1; obsidianRobotLimit <= 24; obsidianRobotLimit++ {
-				geodeAmount := b.GeodeProductionAmount(24, oreRobotLimit, clayRobotLimit, obsidianRobotLimit)
-				if geodeAmount > max {
-					max = geodeAmount
-					fmt.Printf("new max: %d, oreRobotLimit: %d, clayRobotLimit: %d, obsidianRobotLimit: %d\n", max, oreRobotLimit, clayRobotLimit, obsidianRobotLimit)
-				}
-			}
-		}
-	}
-	return max
 }
 
 func Part2() any {
