@@ -156,6 +156,14 @@ func CopyOf[T any](collection []T) []T {
 	return copf
 }
 
+func CopyMap[T comparable, U any](m map[T]U) map[T]U {
+	copf := make(map[T]U)
+	for k, v := range m {
+		copf[k] = v
+	}
+	return copf
+}
+
 func IndexOf[T comparable](haystack []T, needle T) int {
 	for index, value := range haystack {
 		if value == needle {

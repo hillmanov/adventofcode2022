@@ -60,12 +60,11 @@ type State struct {
 	blueprint Blueprint
 }
 
-var cache = map[State]int{}
+type history string
 
-func (b Blueprint) GeodeProductionAmount(minute int, resources ResourceCounts, robots RobotCounts, results *[]int) {
-	if _, ok := cache[State{minute, resources, robots, b}]; ok {
-		return
-	}
+var maxes = map[history]int{}
+
+func (b Blueprint) GeodeProductionAmount(minute int, resources ResourceCounts, robots RobotCounts, results *[]int, history string) int {
 
 	for i := minute; i <= 24; i++ {
 		resources.oreCount += robots.oreRobots
@@ -89,7 +88,7 @@ func (b Blueprint) GeodeProductionAmount(minute int, resources ResourceCounts, r
 					clayRobots:     robots.clayRobots,
 					obsidianRobots: robots.obsidianRobots,
 					geodeRobots:    robots.geodeRobots + 1,
-				}, results)
+				}, results, history+fmt.Sprintf("%d:%d", i, "geode"))
 		}
 
 		if resources.oreCount >= b.ObsidianRobotOreCost && resources.clayCount >= b.ObsidianRobotClayCost {
@@ -105,7 +104,7 @@ func (b Blueprint) GeodeProductionAmount(minute int, resources ResourceCounts, r
 					clayRobots:     robots.clayRobots,
 					obsidianRobots: robots.obsidianRobots + 1,
 					geodeRobots:    robots.geodeRobots,
-				}, results)
+				}, results, history+fmt.Sprintf("%d:%d", i, "obsidian"))
 		}
 
 		if resources.oreCount >= b.ClayRobotCost {
@@ -121,7 +120,7 @@ func (b Blueprint) GeodeProductionAmount(minute int, resources ResourceCounts, r
 					clayRobots:     robots.clayRobots + 1,
 					obsidianRobots: robots.obsidianRobots,
 					geodeRobots:    robots.geodeRobots,
-				}, results)
+				}, results, history+fmt.Sprintf("%d:%d", i, "clay"))
 		}
 		if resources.oreCount >= b.OreRobotCost {
 			b.GeodeProductionAmount(i+1,
@@ -136,14 +135,11 @@ func (b Blueprint) GeodeProductionAmount(minute int, resources ResourceCounts, r
 					clayRobots:     robots.clayRobots,
 					obsidianRobots: robots.obsidianRobots,
 					geodeRobots:    robots.geodeRobots,
-				}, results)
+				}, results, history+fmt.Sprintf("%d:%d", i, "ore"))
 		}
 	}
 
-	cache[State{minute, resources, robots, b}] = resources.geodeCount
-	fmt.Printf("resources = %+v\n", resources)
-
-	*results = append(*results, resources.geodeCount)
+	return resources.geodeCount
 }
 
 func Part1() any {
@@ -165,7 +161,7 @@ func Part1() any {
 		geodeRobots:    0,
 	}
 
-	blueprints[0].GeodeProductionAmount(1, resources, robots, &results)
+	blueprints[0].GeodeProductionAmount(1, resources, robots, &results, []Decision{})
 
 	// for _, blueprint := range blueprints {
 	// 	geodeAmount := getMaxConfiguration(blueprint)
